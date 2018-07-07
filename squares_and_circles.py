@@ -103,16 +103,13 @@ def build_classifier(image, num_labels):
 
 
 def main():
-    with tf.summary.FileWriter('out/events') as writer:
-        writer.add_graph(tf.get_default_graph())
-
     width = 120
     height = 80
     num_labels = 2
     batch_size = 20
     num_train_examples = 1000
     num_test_examples = 20
-    train_steps = 40
+    train_steps = 100
 
     # get the default tensorflow graph
     g = tf.get_default_graph()
@@ -131,7 +128,7 @@ def main():
     loss = tf.losses.sparse_softmax_cross_entropy(label, logits)
 
     # gradient descent
-    optimizer = tf.train.GradientDescentOptimizer(0.001)
+    optimizer = tf.train.GradientDescentOptimizer(0.01)
     train = optimizer.minimize(loss)
 
     # initialization
@@ -142,49 +139,61 @@ def main():
     _, _, train_dataset = sample_dataset(num_train_examples, width, height)
     _, _, test_dataset = sample_dataset(num_test_examples, width, height)
 
+    with tf.summary.FileWriter('log') as writer:
+        writer.add_graph(g)
+
     # run
     s = tf.Session()
     s.run((var_init, table_init))
 
     # initialize the iterator to the training set
-    s.run(it.make_initializer(train_dataset.shuffle(
-        buffer_size=num_train_examples).repeat().batch(batch_size)))
+    train_init = it.make_initializer(train_dataset.shuffle(
+        buffer_size=num_train_examples).repeat().batch(batch_size))
+    s.run(train_init)
     for step in range(train_steps):
         cur_loss, _ = s.run((loss, train))
         print("step {0} of {1}: loss={2:.5f}".format(
             step+1, train_steps, cur_loss))
 
-    # evaluate
-    i = 0
-    num_correct = 0
-    num_incorrect = 0
-    s.run(it.make_initializer(test_dataset.batch(1)))
-    while True:
-        try:
-            out, correct_label = s.run((logits, input["label"]))
-        except tf.errors.OutOfRangeError:
-            print("reached end of sequence")
-            break
+        if (step + 1) % 100 == 0:
+            # evaluate
+            print("evaluating")
+            i = 0
+            num_correct = 0
+            num_incorrect = 0
+            s.run(it.make_initializer(test_dataset.batch(1)))
+            punchlist = ""
+            while True:
+                try:
+                    out, correct_label = s.run((logits, input["label"]))
+                except tf.errors.OutOfRangeError:
+                    print("reached end of sequence")
+                    break
 
-        estimated_label = np.argmax(out)
-        if correct_label == estimated_label:
-            num_correct += 1
-            flag = "CORRECT"
-        else:
-            num_incorrect += 1
-            flag = "INCORRECT"
+                estimated_label = np.argmax(out)
+                if correct_label == estimated_label:
+                    num_correct += 1
+                    punchlist += "_"
+                    flag = "CORRECT"
+                else:
+                    num_incorrect += 1
+                    flag = "INCORRECT"
+                    punchlist += "x"
 
-        print("item {0}:  estimated {1}, labelled {2}  {3}".format(
-            i+1, estimated_label, int(correct_label), flag))
+                #print("item {0}:  estimated {1}, labelled {2}  {3}".format(
+                #    i+1, estimated_label, int(correct_label), flag))
 
-        i += 1
+                i += 1
 
-    total = num_correct + num_incorrect
+            total = num_correct + num_incorrect
 
-    print("test accuracy: {0}/{1}: {2:.2%}".format(num_correct,
-                                                   total,
-                                                   float(num_correct)/total))
+            print("test accuracy: {0}/{1}: {2:.2%}  |{3}|".format(
+                num_correct,
+                total,
+                float(num_correct)/total,
+                punchlist))
 
+            s.run(train_init)
 
 if __name__ == '__main__':
     main()
