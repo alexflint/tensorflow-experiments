@@ -21,16 +21,16 @@ class State(object):
     Represents the state of a pong game
     """
 
-    def __init__(self, selection=0, target=0):
+    def __init__(self, selection=0, goal=0):
         self.selection = selection
-        self.target = target
+        self.goal = goal
 
     def key(self):
-        return (self.selection, self.target)
+        return (self.selection, self.goal)
 
     def __hash__(self):
         return hash(self.key())
-    
+
     def __eq__(self, rhs):
         return self.key() == rhs.key()
 
@@ -38,7 +38,7 @@ class State(object):
         return self.key() < rhs.key()
 
     def __repr__(self):
-        return "State[%d, %d]" % (self.selection, self.target)
+        return "State[%d, %d]" % (self.selection, self.goal)
 
 
 class BadTransition(Exception):
@@ -62,36 +62,51 @@ class Menu(object):
         """
         state = State()
         state.selection = random.randint(0, self.opts.num_items - 1)
-        state.target = random.randint(0, self.opts.num_items - 1)
+        state.goal = random.randint(0, self.opts.num_items - 1)
         if self.opts.always_bottom:
-            state.target = self.opts.num_items - 1
+            state.goal = self.opts.num_items - 1
         return state
 
+    @property
     def actions(self):
         """
         actions returns the set of possible actions
+        we use strings so that these do not get confused for action indices
         """
-        return (-1, 0, 1)  # 0 mean "select"
+        return ("up", "select", "down")
 
     def render(self, state):
         """
         Render a game state to an image
         """
-        frame = np.zeros((self.opts.item_width, self.opts.item_height * self.opts.num_items), dtype=int)
+        return np.array((state.selection < state.goal, state.selection == state.goal, state.selection > state.goal), dtype=float)
+        frame = np.zeros((self.opts.item_width, self.opts.item_height * self.opts.num_items + 1), dtype=int)
         frame[:, state.selection * self.opts.item_height: (state.selection + 1) * self.opts.item_height] += 1
-        frame[:, state.target * self.opts.item_height: (state.target + 1) * self.opts.item_height] -= 1
+        frame[:, state.goal * self.opts.item_height: (state.goal + 1) * self.opts.item_height] -= 1
+        frame[:, -1] = state.selection - state.goal
         return frame
 
     def transition(self, state, action):
         """
         Returns (new_state, reward) where new_state is None if game has ended
         """
-        if action == 0 and state.selection == state.target:
+        if action == "select" and state.selection == state.goal:
             return None, 1.
-        elif action == 0 or state.selection == state.target:
+        elif action == "select" or state.selection == state.goal:
             raise BadTransition()
         else:
             new_state = State()
-            new_state.selection = max(min(state.selection + action, self.opts.num_items-1), 0)
-            new_state.target = state.target
+            dx = -1 if action == "up" else 1
+            new_state.selection = max(min(state.selection + dx, self.opts.num_items-1), 0)
+            new_state.goal = state.goal
             return new_state, 0.
+
+    def statespace(self):
+        """
+        Returns a list of all possible game states
+        """
+        out = []
+        for selection in range(self.opts.num_items):
+            for target in range(self.opts.num_items):
+                out.append(State(selection, target))
+        return out

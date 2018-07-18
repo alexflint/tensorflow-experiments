@@ -5,6 +5,7 @@ np.set_printoptions(linewidth=300, suppress=True)
 
 
 def main():
+    # set up reward matrix for a simple explicit graph
     rewards = np.array([
         [-1, -1, -1, -1, 0, -1],
         [-1, -1, -1, 0, -1, 100],
