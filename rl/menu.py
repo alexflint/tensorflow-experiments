@@ -75,11 +75,17 @@ class Menu(object):
         """
         return ("up", "select", "down")
 
-    def render(self, state):
+    def render_cheat(self, state):
         """
         Render a game state to an image
         """
         return np.array((state.selection < state.goal, state.selection == state.goal, state.selection > state.goal), dtype=float)
+
+    def render(self, state):
+        """
+        Render a game state to an image
+        """
+        return self.render_cheat(state)
         frame = np.zeros((self.opts.item_width, self.opts.item_height * self.opts.num_items + 1), dtype=int)
         frame[:, state.selection * self.opts.item_height: (state.selection + 1) * self.opts.item_height] += 1
         frame[:, state.goal * self.opts.item_height: (state.goal + 1) * self.opts.item_height] -= 1
@@ -110,3 +116,12 @@ class Menu(object):
             for target in range(self.opts.num_items):
                 out.append(State(selection, target))
         return out
+
+    def format_trajectory(self, trajectory):
+        """
+        Produce a nice string representation of a sequence of (state, action) pairs
+        """
+        if len(trajectory) == 0:
+            return "<empty trajectory>"
+        seq = " -> ".join(str(state.selection) for state, _ in trajectory)
+        return "[Goal={}] {}".format(trajectory[0][0].goal, seq)

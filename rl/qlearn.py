@@ -186,25 +186,27 @@ def main():
     print("\nEVALUATIONS:")
     for state in game.statespace():
         trajectory = []
+        outcome = ""
         total_reward = 0.
         for _ in range(20):
-            trajectory.append(state)
             action = np.argmax(q.evaluate(game.render(state)))
-            trajectory.append(game.actions[action])
+            trajectory.append((state, game.actions[action]))
             try:
                 next_state, reward = game.transition(state, game.actions[action])
             except menu.BadTransition:
-                trajectory.append("BadTransition")
+                outcome = "BadTransition"
                 break
             total_reward += reward
             if next_state is None:
+                outcome = "SUCCESS"
                 break
             if next_state == state:
-                trajectory.append("LOOP")
+                outcome = "LOOP"
                 break
             state = next_state
 
-        print("%-10s %s" % (str(total_reward), " -> ".join(map(str, trajectory))))
+        #print("%-10s %s" % (str(total_reward), " -> ".join(map(str, trajectory))))
+        print("%-10s %s -> %s" % (str(total_reward), game.format_trajectory(trajectory), outcome))
 
 
 if __name__ == "__main__":
