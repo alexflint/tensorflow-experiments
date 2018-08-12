@@ -75,22 +75,33 @@ class Menu(object):
         """
         return ("up", "select", "down")
 
-    def render_cheat(self, state):
+    def render_easy(self, state):
         """
-        Render a game state to an image
+        Render a game state as three pixels indicating the correct action
         """
         return np.array((state.selection < state.goal, state.selection == state.goal, state.selection > state.goal), dtype=float)
 
-    def render(self, state):
+    def render_points(self, state):
         """
-        Render a game state to an image
+        Render a game state as a column for the goal and a column for the current selection
         """
-        return self.render_cheat(state)
+        frame = np.zeros((self.opts.num_items, 2))
+        frame[state.selection, 0] = 1.
+        frame[state.goal, 1] = 1.
+
+    def render_rects(self, state):
+        """
+        Render a game state as a series of rectangles for each menu item
+        """
         frame = np.zeros((self.opts.item_width, self.opts.item_height * self.opts.num_items + 1), dtype=int)
         frame[:, state.selection * self.opts.item_height: (state.selection + 1) * self.opts.item_height] += 1
         frame[:, state.goal * self.opts.item_height: (state.goal + 1) * self.opts.item_height] -= 1
         frame[:, -1] = state.selection - state.goal
         return frame
+
+    def render(self, state):
+        """Render a game state to an image"""
+        return self.render_easy(state)
 
     def transition(self, state, action):
         """
