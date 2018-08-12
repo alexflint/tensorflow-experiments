@@ -102,5 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# misc
 /data/
 /out/
+/log/
+.vscode
